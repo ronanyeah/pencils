@@ -1,24 +1,27 @@
 module Main exposing (main)
 
 import Html exposing (Html)
-import Element exposing (Attribute, Element, button, column, el, empty, image, paragraph, row, text, screen, viewport, when)
+import Element exposing (Attribute, Element, button, column, el, empty, html, image, paragraph, row, text, screen, viewport, when)
 import Style exposing (StyleSheet, style, styleSheet, variation)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
+import Task
+import Window
 
 
 main : Program Never Model Msg
 main =
     Html.program
-        { init = ( {}, Cmd.none )
+        { init = ( emptyModel, Task.perform Resize Window.size )
         , subscriptions = always Sub.none
-        , update = \_ _ -> ( {}, Cmd.none )
+        , update = update
         , view = view
         }
 
 
 type alias Model =
-    {}
+    { device : Element.Device
+    }
 
 
 type Styles
@@ -26,7 +29,7 @@ type Styles
 
 
 type Msg
-    = Ooft
+    = Resize Window.Size
 
 
 styling : StyleSheet Styles vars
@@ -37,10 +40,43 @@ styling =
 
 view : Model -> Html Msg
 view model =
-    svg []
-        [ rect [ width "200", height "100", fill "#BBC42A" ] []
-        , polygon [ points "200,0 250,50 200,100", Svg.Attributes.style "fill: #BBC42A;" ] []
-        ]
+    let
+        rows =
+            List.range 0 5
+                |> List.map
+                    (\_ ->
+                        row None
+                            []
+                            [ html <|
+                                svg [ height "100" ]
+                                    [ rect [ width "200", height "100", fill "#BBC42A" ] []
+                                    , polygon
+                                        [ points "200,0 250,50 200,100"
+                                        , Svg.Attributes.style "fill: #BBC42A;"
+                                        ]
+                                        []
+                                    ]
+                            , html <|
+                                svg [ height "100" ]
+                                    [ polygon
+                                        [ points "200,0 250,50 200,100"
+                                        , Svg.Attributes.style "fill: #BBC42A;"
+                                        ]
+                                        []
+                                    , rect [ width "200", height "100", fill "#BBC42A" ] []
+                                    ]
+                            ]
+                    )
+    in
+        viewport styling <|
+            column None [] rows
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        Resize size ->
+            { model | device = Element.classifyDevice size } ! []
 
 
 pencil =
@@ -74,6 +110,15 @@ circ =
         ]
 
 
-
---viewport styling <|
---column None [] []
+emptyModel : Model
+emptyModel =
+    { device =
+        { width = 0
+        , height = 0
+        , phone = False
+        , tablet = False
+        , desktop = False
+        , bigDesktop = False
+        , portrait = False
+        }
+    }
