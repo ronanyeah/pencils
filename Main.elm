@@ -2,9 +2,10 @@ module Main exposing (main)
 
 import Html exposing (Html)
 import Element exposing (Attribute, Element, button, column, el, empty, html, image, paragraph, row, text, screen, viewport, when)
+import Element.Attributes exposing (alignBottom, alignLeft, attribute, center, class, fill, height, id, padding, px, spacing, maxHeight, maxWidth, moveDown, moveLeft, moveRight, moveUp, verticalCenter, width, percent, vary, scrollbars)
 import Style exposing (StyleSheet, style, styleSheet, variation)
 import Svg exposing (..)
-import Svg.Attributes exposing (..)
+import Svg.Attributes as SA exposing (..)
 import Task
 import Window
 
@@ -13,7 +14,7 @@ main : Program Never Model Msg
 main =
     Html.program
         { init = ( emptyModel, Task.perform Resize Window.size )
-        , subscriptions = always Sub.none
+        , subscriptions = always (Window.resizes Resize)
         , update = update
         , view = view
         }
@@ -22,6 +23,11 @@ main =
 type alias Model =
     { device : Element.Device
     }
+
+
+type Pencil
+    = Left Int Int Int
+    | Right Int Int Int
 
 
 type Styles
@@ -35,36 +41,43 @@ type Msg
 styling : StyleSheet Styles vars
 styling =
     styleSheet
-        [ Style.style None [] ]
+        [ Style.style None []
+        ]
 
 
 view : Model -> Html Msg
-view model =
+view { device } =
     let
+        pBody =
+            device.width
+                |> toFloat
+                |> flip (/) 2
+                |> (*) 0.9
+                |> round
+
+        pTip =
+            device.width
+                |> toFloat
+                |> flip (/) 2
+                |> (*) 0.1
+                |> round
+
+        pHeight =
+            device.height
+                |> flip (//) 15
+
         rows =
-            List.range 0 5
+            List.range 0 14
                 |> List.map
                     (\_ ->
                         row None
-                            []
-                            [ html <|
-                                svg [ height "100" ]
-                                    [ rect [ width "200", height "100", fill "#BBC42A" ] []
-                                    , polygon
-                                        [ points "200,0 250,50 200,100"
-                                        , Svg.Attributes.style "fill: #BBC42A;"
-                                        ]
-                                        []
-                                    ]
-                            , html <|
-                                svg [ height "100" ]
-                                    [ polygon
-                                        [ points "50,0 0,50 50,100"
-                                        , Svg.Attributes.style "fill: #BBC42A;"
-                                        ]
-                                        []
-                                    , rect [ x "50", y "0", width "200", height "100", fill "#BBC42A" ] []
-                                    ]
+                            [ Element.Attributes.height <| px <| toFloat pHeight ]
+                            [ el None [ moveRight (pTip // 2 |> toFloat), Element.Attributes.height <| px <| toFloat pHeight ] <|
+                                html <|
+                                    pencil (Left pBody pTip pHeight)
+                            , el None [ moveDown <| (pHeight // 2 |> toFloat), moveLeft (pTip // 2 |> toFloat), Element.Attributes.height <| px <| toFloat pHeight ] <|
+                                html <|
+                                    pencil (Right pBody pTip pHeight)
                             ]
                     )
     in
@@ -72,42 +85,66 @@ view model =
             column None [] rows
 
 
+pencil : Pencil -> Html Msg
+pencil p =
+    let
+        border =
+            SA.style "stroke: purple; stroke-width: 1"
+
+        pTip =
+            case p of
+                Left bodyWidth tipWidth pHeight ->
+                    polygon
+                        [ points <| tip ( bodyWidth, 0 ) ( bodyWidth + tipWidth, pHeight // 2 ) ( bodyWidth, pHeight )
+                        , SA.fill "red"
+                        , border
+                        ]
+                        []
+
+                Right bodyWidth tipWidth pHeight ->
+                    polygon
+                        [ points <| tip ( tipWidth, 0 ) ( 0, pHeight // 2 ) ( tipWidth, pHeight )
+                        , SA.fill "blue"
+                        , border
+                        ]
+                        []
+
+        ( pHeight, pWidth ) =
+            case p of
+                Left b t h ->
+                    ( toString h, toString (b + t) )
+
+                Right b t h ->
+                    ( toString h, toString (b + t) )
+
+        body =
+            case p of
+                Left b _ h ->
+                    rect [ SA.width <| toString b, SA.height <| toString h, SA.fill "green", border ] []
+
+                Right b t h ->
+                    rect [ x <| toString t, y "0", SA.width <| toString b, SA.height <| toString h, SA.fill "yellow", border ] []
+    in
+        svg [ SA.height pHeight, SA.width pWidth ]
+            [ body
+            , pTip
+            ]
+
+
+tip : ( Int, Int ) -> ( Int, Int ) -> ( Int, Int ) -> String
+tip a b c =
+    let
+        point ( d, e ) =
+            toString d ++ "," ++ toString e
+    in
+        point a ++ " " ++ point b ++ " " ++ point c
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Resize size ->
             { model | device = Element.classifyDevice size } ! []
-
-
-pencil =
-    svg [ height "600", width "600" ]
-        [ g []
-            [ g [ stroke "#000000", fill "none" ]
-                [ Svg.path
-                    [ d "m70.064 422.35 374.27-374.26 107.58 107.58-374.26 374.27-129.56 21.97z"
-                    , strokeWidth "30"
-                    ]
-                    []
-                , Svg.path [ d "m70.569 417.81 110.61 110.61", strokeWidth "25" ] []
-                , Svg.path [ d "m491.47 108.37-366.69 366.68", strokeWidth "25" ] []
-                , Svg.path [ d "m54.222 507.26 40.975 39.546", strokeWidth "25" ] []
-                ]
-            ]
-        ]
-
-
-circ =
-    svg [ viewBox "0 0 100 100", width "300px" ]
-        [ circle [ cx "50", cy "50", r "45", fill "#0B79CE" ] []
-        , line
-            [ x1 "50"
-            , y1 "50"
-            , x2 <| toString (50 + 40 * cos 0)
-            , y2 <| toString (50 + 40 * sin 0)
-            , stroke "#023963"
-            ]
-            []
-        ]
 
 
 emptyModel : Model
