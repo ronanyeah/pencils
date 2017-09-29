@@ -1,2 +1,2 @@
 #!/bin/bash
-chokidar '**/*.elm' -c 'elm make Main.elm --output index.html' --initial
+chokidar '**/*.elm' -c 'elm-make --debug --warn Main.elm --output index.html' --initial
