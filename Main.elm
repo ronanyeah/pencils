@@ -59,11 +59,11 @@ view model =
                             , html <|
                                 svg [ height "100" ]
                                     [ polygon
-                                        [ points "200,0 250,50 200,100"
+                                        [ points "50,0 0,50 50,100"
                                         , Svg.Attributes.style "fill: #BBC42A;"
                                         ]
                                         []
-                                    , rect [ width "200", height "100", fill "#BBC42A" ] []
+                                    , rect [ x "50", y "0", width "200", height "100", fill "#BBC42A" ] []
                                     ]
                             ]
                     )
