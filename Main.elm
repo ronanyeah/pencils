@@ -6,6 +6,7 @@ import Element.Attributes exposing (alignBottom, alignLeft, attribute, center, c
 import Style exposing (StyleSheet, style, styleSheet, variation)
 import Svg exposing (..)
 import Svg.Attributes as SA exposing (..)
+import Svg.Events exposing (onMouseOver)
 import Task
 import Window
 
@@ -22,12 +23,17 @@ main =
 
 type alias Model =
     { device : Element.Device
+    , current : ( Side, Int )
     }
 
 
+type Side
+    = Left
+    | Right
+
+
 type Pencil
-    = Left Int Int Int
-    | Right Int Int Int
+    = Pencil Side Int Int Int
 
 
 type Styles
@@ -36,6 +42,7 @@ type Styles
 
 type Msg
     = Resize Window.Size
+    | Enter ( Side, Int )
 
 
 styling : StyleSheet Styles vars
@@ -69,15 +76,25 @@ view { device } =
         rows =
             List.range 0 14
                 |> List.map
-                    (\_ ->
+                    (\i ->
                         row None
-                            [ Element.Attributes.height <| px <| toFloat pHeight ]
-                            [ el None [ moveRight (pTip // 2 |> toFloat), Element.Attributes.height <| px <| toFloat pHeight ] <|
+                            [ Element.Attributes.height <| px <| toFloat pHeight
+                            ]
+                            [ el None
+                                [ moveRight (pTip // 2 |> toFloat)
+                                , Element.Attributes.height <| px <| toFloat pHeight
+                                ]
+                              <|
                                 html <|
-                                    pencil (Left pBody pTip pHeight)
-                            , el None [ moveDown <| (pHeight // 2 |> toFloat), moveLeft (pTip // 2 |> toFloat), Element.Attributes.height <| px <| toFloat pHeight ] <|
+                                    pencil i (Pencil Left pBody pTip pHeight)
+                            , el None
+                                [ moveDown <| (pHeight // 2 |> toFloat)
+                                , moveLeft (pTip // 2 |> toFloat)
+                                , Element.Attributes.height <| px <| toFloat pHeight
+                                ]
+                              <|
                                 html <|
-                                    pencil (Right pBody pTip pHeight)
+                                    pencil i (Pencil Right pBody pTip pHeight)
                             ]
                     )
     in
@@ -85,44 +102,46 @@ view { device } =
             column None [] rows
 
 
-pencil : Pencil -> Html Msg
-pencil p =
+pencil : Int -> Pencil -> Html Msg
+pencil i p =
     let
         border =
             SA.style "stroke: purple; stroke-width: 1"
 
         pTip =
             case p of
-                Left bodyWidth tipWidth pHeight ->
+                Pencil Left bodyWidth tipWidth pHeight ->
                     polygon
                         [ points <| tip ( bodyWidth, 0 ) ( bodyWidth + tipWidth, pHeight // 2 ) ( bodyWidth, pHeight )
                         , SA.fill "red"
                         , border
+                        , onMouseOver <| Enter ( Left, i )
                         ]
                         []
 
-                Right bodyWidth tipWidth pHeight ->
+                Pencil Right bodyWidth tipWidth pHeight ->
                     polygon
                         [ points <| tip ( tipWidth, 0 ) ( 0, pHeight // 2 ) ( tipWidth, pHeight )
                         , SA.fill "blue"
                         , border
+                        , onMouseOver <| Enter ( Right, i )
                         ]
                         []
 
         ( pHeight, pWidth ) =
             case p of
-                Left b t h ->
+                Pencil Left b t h ->
                     ( toString h, toString (b + t) )
 
-                Right b t h ->
+                Pencil Right b t h ->
                     ( toString h, toString (b + t) )
 
         body =
             case p of
-                Left b _ h ->
+                Pencil Left b _ h ->
                     rect [ SA.width <| toString b, SA.height <| toString h, SA.fill "green", border ] []
 
-                Right b t h ->
+                Pencil Right b t h ->
                     rect [ x <| toString t, y "0", SA.width <| toString b, SA.height <| toString h, SA.fill "yellow", border ] []
     in
         svg [ SA.height pHeight, SA.width pWidth ]
@@ -146,6 +165,26 @@ update msg model =
         Resize size ->
             { model | device = Element.classifyDevice size } ! []
 
+        Enter (( side, i ) as node) ->
+            let
+                val =
+                    isNext model.current node
+
+                _ =
+                    Debug.log "enter" val
+            in
+                { model | current = node } ! []
+
+
+isNext : ( Side, Int ) -> ( Side, Int ) -> Bool
+isNext ( currSide, currInt ) ( newSide, newInt ) =
+    case currSide of
+        Left ->
+            newSide == Right && currInt == newInt
+
+        Right ->
+            newSide == Left && newInt == (currInt + 1)
+
 
 emptyModel : Model
 emptyModel =
@@ -158,4 +197,5 @@ emptyModel =
         , bigDesktop = False
         , portrait = False
         }
+    , current = ( Left, -1 )
     }
