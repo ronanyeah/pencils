@@ -1,10 +1,10 @@
 module Main exposing (main)
 
 import Html exposing (Html)
-import Element exposing (Attribute, Element, button, column, el, empty, html, image, paragraph, row, text, screen, viewport, when)
-import Element.Attributes exposing (alignBottom, alignLeft, alignRight, attribute, center, class, fill, height, id, padding, px, spacing, maxHeight, maxWidth, moveDown, moveLeft, moveRight, moveUp, verticalCenter, width, percent, vary, scrollbars)
+import Element exposing (column, el, html, viewport)
+import Element.Attributes exposing (alignLeft, alignRight, px, moveLeft, moveRight, moveUp)
 import Json.Decode
-import Style exposing (StyleSheet, style, styleSheet, variation)
+import Style exposing (StyleSheet, styleSheet)
 import Svg exposing (..)
 import Svg.Attributes as SA exposing (..)
 import Svg.Events exposing (on, onMouseOver)
@@ -33,10 +33,6 @@ type Side
     | Right
 
 
-type Pencil
-    = Pencil Side Int Int Int
-
-
 type Styles
     = None
 
@@ -49,7 +45,7 @@ type Msg
 styling : StyleSheet Styles vars
 styling =
     styleSheet
-        [ Style.style None []
+        [ Svg.style None []
         ]
 
 
@@ -94,7 +90,7 @@ view { device, open } =
                                     ]
                                 <|
                                     html <|
-                                        pencil i (Pencil Left pBody pTip pHeight)
+                                        pencil i Left pBody pTip pHeight
                             else
                                 el None
                                     [ Element.Attributes.height <| px <| toFloat pHeight
@@ -104,7 +100,7 @@ view { device, open } =
                                     ]
                                 <|
                                     html <|
-                                        pencil i (Pencil Right pBody pTip pHeight)
+                                        pencil i Right pBody pTip pHeight
                     )
     in
         Html.div []
@@ -117,59 +113,64 @@ view { device, open } =
             ]
 
 
-pencil : Int -> Pencil -> Html Msg
-pencil i p =
+pencil : Int -> Side -> Int -> Int -> Int -> Html Msg
+pencil index side bodyWidth tipWidth pencilHeight =
     let
-        border =
-            SA.style "stroke: purple; stroke-width: 1"
+        tipPoints =
+            case side of
+                Left ->
+                    tip ( bodyWidth, 0 ) ( bodyWidth + tipWidth, pencilHeight // 2 ) ( bodyWidth, pencilHeight )
 
-        pTip =
-            case p of
-                Pencil Left bodyWidth tipWidth pHeight ->
-                    polygon
-                        [ points <| tip ( bodyWidth, 0 ) ( bodyWidth + tipWidth, pHeight // 2 ) ( bodyWidth, pHeight )
-                        , SA.fill "red"
-                        , border
-                        , onMouseOver <| Zip i
-                        , touchMove i
-                        ]
-                        []
+                Right ->
+                    tip ( tipWidth, 0 ) ( 0, pencilHeight // 2 ) ( tipWidth, pencilHeight )
 
-                Pencil Right bodyWidth tipWidth pHeight ->
-                    polygon
-                        [ points <| tip ( tipWidth, 0 ) ( 0, pHeight // 2 ) ( tipWidth, pHeight )
-                        , SA.fill "blue"
-                        , border
-                        , onMouseOver <| Zip i
-                        , touchMove i
-                        ]
-                        []
+        bodyColor =
+            case side of
+                Left ->
+                    "red"
 
-        ( pHeight, pWidth ) =
-            case p of
-                Pencil Left b t h ->
-                    ( toString h, toString (b + t) )
+                Right ->
+                    "blue"
 
-                Pencil Right b t h ->
-                    ( toString h, toString (b + t) )
+        tipColor =
+            case side of
+                Left ->
+                    "green"
 
-        body =
-            case p of
-                Pencil Left b _ h ->
-                    rect [ SA.width <| toString b, SA.height <| toString h, SA.fill "green", border ] []
+                Right ->
+                    "yellow"
 
-                Pencil Right b t h ->
-                    rect [ x <| toString t, y "0", SA.width <| toString b, SA.height <| toString h, SA.fill "yellow", border ] []
+        bodyShift =
+            case side of
+                Left ->
+                    "0"
+
+                Right ->
+                    toString tipWidth
     in
-        svg [ SA.height pHeight, SA.width pWidth ]
-            [ body
-            , pTip
+        svg [ SA.height <| toString pencilHeight, SA.width <| toString (bodyWidth + tipWidth) ]
+            [ rect
+                [ SA.width <| toString bodyWidth
+                , SA.height <| toString pencilHeight
+                , SA.fill bodyColor
+                , SA.style "stroke: purple; stroke-width: 1"
+                , x bodyShift
+                ]
+                []
+            , polygon
+                [ points tipPoints
+                , SA.fill tipColor
+                , SA.style "stroke: purple; stroke-width: 1" -- border
+                , onMouseOver <| Zip index
+                , touchMove index
+                ]
+                []
             ]
 
 
 touchMove : Int -> Svg.Attribute Msg
-touchMove i =
-    on "touchmove" (Json.Decode.succeed <| Zip i)
+touchMove =
+    Zip >> Json.Decode.succeed >> on "touchmove"
 
 
 isEven : Int -> Bool
@@ -202,16 +203,6 @@ update msg model =
                         model.open
             in
                 { model | open = open } ! []
-
-
-isNext : ( Side, Int ) -> ( Side, Int ) -> Bool
-isNext ( currSide, currInt ) ( newSide, newInt ) =
-    case currSide of
-        Left ->
-            newSide == Right && currInt == newInt
-
-        Right ->
-            newSide == Left && newInt == (currInt + 1)
 
 
 emptyModel : Model
