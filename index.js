@@ -1,19 +1,16 @@
-var Elm = require("./Main.elm");
+const Elm = require("./Main.elm");
 
-var app = Elm.Main.fullscreen();
+const app = Elm.Main.fullscreen();
 
-app.ports.touchPort.subscribe((e, open) => {
-  const touch = e.touches;
-
-  const x = touch ? touch[0].pageX : e.pageX;
-
-  const y = touch ? touch[0].pageY : e.pageY;
-
+app.ports.touch.subscribe(([x, y]) => {
   const pointElem = document.elementFromPoint(x, y);
   if (!pointElem) return;
 
   const currElem = pointElem.closest("svg");
   if (!currElem) return;
 
-  console.log(currElem.id);
+  const id = Number(currElem.id);
+  if (isNaN(id)) return;
+
+  return app.ports.zip.send(id);
 });

@@ -4,7 +4,6 @@ import Html exposing (Html)
 import Element exposing (column, el, html, viewport)
 import Element.Attributes exposing (alignLeft, alignRight, px, moveLeft, moveRight, moveUp)
 import Json.Decode
-import Json.Encode
 import Style exposing (StyleSheet, styleSheet)
 import Svg exposing (..)
 import Svg.Attributes as SA exposing (..)
@@ -17,13 +16,16 @@ main : Program Never Model Msg
 main =
     Html.program
         { init = ( emptyModel, Task.perform Resize Window.size )
-        , subscriptions = always (Window.resizes Resize)
+        , subscriptions = always <| Sub.batch [ zip Zip, Window.resizes Resize ]
         , update = update
         , view = view
         }
 
 
-port touchPort : ( Json.Encode.Value, Int ) -> Cmd msg
+port touch : ( Int, Int ) -> Cmd msg
+
+
+port zip : (Int -> msg) -> Sub msg
 
 
 type alias Model =
@@ -44,7 +46,7 @@ type Styles
 type Msg
     = Resize Window.Size
     | Zip Int
-    | Touch Json.Encode.Value
+    | Touch Int Int
 
 
 styling : StyleSheet Styles vars
@@ -57,16 +59,16 @@ styling =
 view : Model -> Html Msg
 view { device, open } =
     let
-        pBody =
+        bodyWidth =
             device.width
                 |> toFloat
                 |> (*) 0.45
                 |> round
 
-        pTip =
+        tipWidth =
             device.width // 10
 
-        pHeight =
+        pencilHeight =
             device.height // 15
 
         rows =
@@ -74,38 +76,38 @@ view { device, open } =
                 |> List.map
                     (\i ->
                         let
-                            shift =
+                            yShift =
                                 if i /= 0 then
-                                    pHeight // 2 |> (*) i |> toFloat
+                                    pencilHeight // 2 |> (*) i |> toFloat
                                 else
                                     0
 
                             xShift =
                                 if open > i then
-                                    10 * (open - i) |> clamp 0 pBody |> toFloat
+                                    10 * (open - i) |> clamp 0 bodyWidth |> toFloat
                                 else
                                     0
                         in
                             if i |> isEven then
                                 el None
-                                    [ Element.Attributes.height <| px <| toFloat pHeight
+                                    [ Element.Attributes.height <| px <| toFloat pencilHeight
                                     , alignLeft
-                                    , moveUp shift
+                                    , moveUp yShift
                                     , moveLeft xShift
                                     ]
                                 <|
                                     html <|
-                                        pencil i Left pBody pTip pHeight
+                                        pencil i Left bodyWidth tipWidth pencilHeight
                             else
                                 el None
-                                    [ Element.Attributes.height <| px <| toFloat pHeight
-                                    , moveUp shift
+                                    [ Element.Attributes.height <| px <| toFloat pencilHeight
                                     , alignRight
+                                    , moveUp yShift
                                     , moveRight xShift
                                     ]
                                 <|
                                     html <|
-                                        pencil i Right pBody pTip pHeight
+                                        pencil i Right bodyWidth tipWidth pencilHeight
                     )
     in
         Html.div []
@@ -155,6 +157,12 @@ pencil index side bodyWidth tipWidth pencilHeight =
 
         border =
             SA.style "stroke: purple; stroke-width: 1"
+
+        touchMove =
+            Json.Decode.map2
+                Touch
+                (Json.Decode.at [ "touches", "0", "pageX" ] Json.Decode.int)
+                (Json.Decode.at [ "touches", "0", "pageY" ] Json.Decode.int)
     in
         svg [ SA.height <| toString pencilHeight, SA.width <| toString (bodyWidth + tipWidth), SA.id <| toString index ]
             [ rect
@@ -170,7 +178,7 @@ pencil index side bodyWidth tipWidth pencilHeight =
                 , SA.fill tipColor
                 , border
                 , onMouseOver <| Zip index
-                , on "touchmove" <| Json.Decode.map Touch Json.Decode.value
+                , on "touchmove" touchMove
                 ]
                 []
             ]
@@ -207,8 +215,8 @@ update msg model =
             in
                 { model | open = open } ! []
 
-        Touch e ->
-            model ! [ touchPort ( e, model.open ) ]
+        Touch x y ->
+            model ! [ touch ( x, y ) ]
 
 
 emptyModel : Model
