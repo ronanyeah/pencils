@@ -3,6 +3,7 @@ module Main exposing (main)
 import Html exposing (Html)
 import Element exposing (Attribute, Element, button, column, el, empty, html, image, paragraph, row, text, screen, viewport, when)
 import Element.Attributes exposing (alignBottom, alignLeft, alignRight, attribute, center, class, fill, height, id, padding, px, spacing, maxHeight, maxWidth, moveDown, moveLeft, moveRight, moveUp, verticalCenter, width, percent, vary, scrollbars)
+import Element.Events exposing (onMouseEnter)
 import Style exposing (StyleSheet, style, styleSheet, variation)
 import Svg exposing (..)
 import Svg.Attributes as SA exposing (..)
@@ -23,7 +24,7 @@ main =
 
 type alias Model =
     { device : Element.Device
-    , current : ( Side, Int )
+    , open : Int
     }
 
 
@@ -42,7 +43,8 @@ type Styles
 
 type Msg
     = Resize Window.Size
-    | Enter ( Side, Int )
+    | Unzip Int
+    | Zip Int
 
 
 styling : StyleSheet Styles vars
@@ -53,7 +55,7 @@ styling =
 
 
 view : Model -> Html Msg
-view { device } =
+view { device, open } =
     let
         pBody =
             device.width
@@ -77,6 +79,12 @@ view { device } =
                                     pHeight // 2 |> (*) i |> toFloat
                                 else
                                     0
+
+                            xShift =
+                                if open > i then
+                                    10 * (open - i) |> clamp 0 pBody |> toFloat
+                                else
+                                    0
                         in
                             if i |> isEven then
                                 el None
@@ -84,6 +92,8 @@ view { device } =
                                     [ Element.Attributes.height <| px <| toFloat pHeight
                                     , alignLeft
                                     , moveUp shift
+                                    , moveLeft xShift
+                                    , onMouseEnter <| Zip i
                                     ]
                                 <|
                                     html <|
@@ -95,6 +105,8 @@ view { device } =
                                     [ Element.Attributes.height <| px <| toFloat pHeight
                                     , moveUp shift
                                     , alignRight
+                                    , moveRight xShift
+                                    , onMouseEnter <| Zip i
                                     ]
                                 <|
                                     html <|
@@ -124,7 +136,7 @@ pencil i p =
                         [ points <| tip ( bodyWidth, 0 ) ( bodyWidth + tipWidth, pHeight // 2 ) ( bodyWidth, pHeight )
                         , SA.fill "red"
                         , border
-                        , onMouseOver <| Enter ( Left, i )
+                        , onMouseOver <| Unzip i
                         ]
                         []
 
@@ -133,7 +145,7 @@ pencil i p =
                         [ points <| tip ( tipWidth, 0 ) ( 0, pHeight // 2 ) ( tipWidth, pHeight )
                         , SA.fill "blue"
                         , border
-                        , onMouseOver <| Enter ( Right, i )
+                        , onMouseOver <| Unzip i
                         ]
                         []
 
@@ -180,15 +192,25 @@ update msg model =
         Resize size ->
             { model | device = Element.classifyDevice size } ! []
 
-        Enter (( side, i ) as node) ->
+        Unzip i ->
             let
-                val =
-                    isNext model.current node
-
-                _ =
-                    Debug.log "enter" val
+                open =
+                    if i == model.open + 1 then
+                        i
+                    else
+                        model.open
             in
-                { model | current = node } ! []
+                { model | open = open } ! []
+
+        Zip i ->
+            let
+                open =
+                    if i == model.open - 1 then
+                        i
+                    else
+                        model.open
+            in
+                { model | open = open } ! []
 
 
 isNext : ( Side, Int ) -> ( Side, Int ) -> Bool
@@ -212,5 +234,5 @@ emptyModel =
         , bigDesktop = False
         , portrait = False
         }
-    , current = ( Left, -1 )
+    , open = 0
     }
