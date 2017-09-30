@@ -88,7 +88,6 @@ view { device, open } =
                         in
                             if i |> isEven then
                                 el None
-                                    --[ moveRight (pTip // 2 |> toFloat)
                                     [ Element.Attributes.height <| px <| toFloat pHeight
                                     , alignLeft
                                     , moveUp shift
@@ -100,8 +99,6 @@ view { device, open } =
                                         pencil i (Pencil Left pBody pTip pHeight)
                             else
                                 el None
-                                    --[ moveDown <| (pHeight // 2 |> toFloat)
-                                    --, moveLeft (pTip // 2 |> toFloat)
                                     [ Element.Attributes.height <| px <| toFloat pHeight
                                     , moveUp shift
                                     , alignRight
