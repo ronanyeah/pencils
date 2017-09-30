@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Html exposing (Html)
 import Element exposing (Attribute, Element, button, column, el, empty, html, image, paragraph, row, text, screen, viewport, when)
-import Element.Attributes exposing (alignBottom, alignLeft, attribute, center, class, fill, height, id, padding, px, spacing, maxHeight, maxWidth, moveDown, moveLeft, moveRight, moveUp, verticalCenter, width, percent, vary, scrollbars)
+import Element.Attributes exposing (alignBottom, alignLeft, alignRight, attribute, center, class, fill, height, id, padding, px, spacing, maxHeight, maxWidth, moveDown, moveLeft, moveRight, moveUp, verticalCenter, width, percent, vary, scrollbars)
 import Style exposing (StyleSheet, style, styleSheet, variation)
 import Svg exposing (..)
 import Svg.Attributes as SA exposing (..)
@@ -58,48 +58,57 @@ view { device } =
         pBody =
             device.width
                 |> toFloat
-                |> flip (/) 2
-                |> (*) 0.9
+                |> (*) 0.45
                 |> round
 
         pTip =
-            device.width
-                |> toFloat
-                |> flip (/) 2
-                |> (*) 0.1
-                |> round
+            device.width // 10
 
         pHeight =
-            device.height
-                |> flip (//) 15
+            device.height // 15
 
         rows =
-            List.range 0 14
+            List.range 0 29
                 |> List.map
                     (\i ->
-                        row None
-                            [ Element.Attributes.height <| px <| toFloat pHeight
-                            ]
-                            [ el None
-                                [ moveRight (pTip // 2 |> toFloat)
-                                , Element.Attributes.height <| px <| toFloat pHeight
-                                ]
-                              <|
-                                html <|
-                                    pencil i (Pencil Left pBody pTip pHeight)
-                            , el None
-                                [ moveDown <| (pHeight // 2 |> toFloat)
-                                , moveLeft (pTip // 2 |> toFloat)
-                                , Element.Attributes.height <| px <| toFloat pHeight
-                                ]
-                              <|
-                                html <|
-                                    pencil i (Pencil Right pBody pTip pHeight)
-                            ]
+                        let
+                            shift =
+                                if i /= 0 then
+                                    pHeight // 2 |> (*) i |> toFloat
+                                else
+                                    0
+                        in
+                            if i |> isEven then
+                                el None
+                                    --[ moveRight (pTip // 2 |> toFloat)
+                                    [ Element.Attributes.height <| px <| toFloat pHeight
+                                    , alignLeft
+                                    , moveUp shift
+                                    ]
+                                <|
+                                    html <|
+                                        pencil i (Pencil Left pBody pTip pHeight)
+                            else
+                                el None
+                                    --[ moveDown <| (pHeight // 2 |> toFloat)
+                                    --, moveLeft (pTip // 2 |> toFloat)
+                                    [ Element.Attributes.height <| px <| toFloat pHeight
+                                    , moveUp shift
+                                    , alignRight
+                                    ]
+                                <|
+                                    html <|
+                                        pencil i (Pencil Right pBody pTip pHeight)
                     )
     in
-        viewport styling <|
-            column None [] rows
+        Html.div []
+            [ Html.node "style"
+                []
+                [ Html.text "body { overflow: hidden; }"
+                ]
+            , viewport styling <|
+                column None [] rows
+            ]
 
 
 pencil : Int -> Pencil -> Html Msg
@@ -148,6 +157,12 @@ pencil i p =
             [ body
             , pTip
             ]
+
+
+isEven : Int -> Bool
+isEven =
+    flip (%) 2
+        >> (==) 0
 
 
 tip : ( Int, Int ) -> ( Int, Int ) -> ( Int, Int ) -> String
