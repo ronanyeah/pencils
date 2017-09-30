@@ -1,9 +1,10 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Html exposing (Html)
 import Element exposing (column, el, html, viewport)
 import Element.Attributes exposing (alignLeft, alignRight, px, moveLeft, moveRight, moveUp)
 import Json.Decode
+import Json.Encode
 import Style exposing (StyleSheet, styleSheet)
 import Svg exposing (..)
 import Svg.Attributes as SA exposing (..)
@@ -20,6 +21,9 @@ main =
         , update = update
         , view = view
         }
+
+
+port touchPort : ( Json.Encode.Value, Int ) -> Cmd msg
 
 
 type alias Model =
@@ -40,6 +44,7 @@ type Styles
 type Msg
     = Resize Window.Size
     | Zip Int
+    | Touch Json.Encode.Value
 
 
 styling : StyleSheet Styles vars
@@ -147,34 +152,28 @@ pencil index side bodyWidth tipWidth pencilHeight =
 
                 Right ->
                     toString tipWidth
+
+        border =
+            SA.style "stroke: purple; stroke-width: 1"
     in
-        svg [ SA.height <| toString pencilHeight, SA.width <| toString (bodyWidth + tipWidth) ]
+        svg [ SA.height <| toString pencilHeight, SA.width <| toString (bodyWidth + tipWidth), SA.id <| toString index ]
             [ rect
                 [ SA.width <| toString bodyWidth
                 , SA.height <| toString pencilHeight
                 , SA.fill bodyColor
-                , SA.style "stroke: purple; stroke-width: 1"
+                , border
                 , x bodyShift
                 ]
                 []
             , polygon
                 [ points tipPoints
                 , SA.fill tipColor
-                , SA.style "stroke: purple; stroke-width: 1" -- border
+                , border
                 , onMouseOver <| Zip index
-                , touchMove index
+                , on "touchmove" <| Json.Decode.map Touch Json.Decode.value
                 ]
                 []
             ]
-
-
-touchMove : Int -> Svg.Attribute Msg
-touchMove i =
-    let
-        _ =
-            Debug.log "tm" i
-    in
-        on "touchmove" <| Json.Decode.succeed <| Zip i
 
 
 isEven : Int -> Bool
@@ -207,6 +206,9 @@ update msg model =
                         model.open
             in
                 { model | open = open } ! []
+
+        Touch e ->
+            model ! [ touchPort ( e, model.open ) ]
 
 
 emptyModel : Model
