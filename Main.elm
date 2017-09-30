@@ -45,7 +45,7 @@ type Msg
 styling : StyleSheet Styles vars
 styling =
     styleSheet
-        [ Svg.style None []
+        [ Style.style None []
         ]
 
 
@@ -169,8 +169,12 @@ pencil index side bodyWidth tipWidth pencilHeight =
 
 
 touchMove : Int -> Svg.Attribute Msg
-touchMove =
-    Zip >> Json.Decode.succeed >> on "touchmove"
+touchMove i =
+    let
+        _ =
+            Debug.log "tm" i
+    in
+        on "touchmove" <| Json.Decode.succeed <| Zip i
 
 
 isEven : Int -> Bool
