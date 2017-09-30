@@ -3,10 +3,11 @@ module Main exposing (main)
 import Html exposing (Html)
 import Element exposing (Attribute, Element, button, column, el, empty, html, image, paragraph, row, text, screen, viewport, when)
 import Element.Attributes exposing (alignBottom, alignLeft, alignRight, attribute, center, class, fill, height, id, padding, px, spacing, maxHeight, maxWidth, moveDown, moveLeft, moveRight, moveUp, verticalCenter, width, percent, vary, scrollbars)
+import Json.Decode
 import Style exposing (StyleSheet, style, styleSheet, variation)
 import Svg exposing (..)
 import Svg.Attributes as SA exposing (..)
-import Svg.Events exposing (onMouseOver)
+import Svg.Events exposing (on, onMouseOver)
 import Task
 import Window
 
@@ -130,6 +131,7 @@ pencil i p =
                         , SA.fill "red"
                         , border
                         , onMouseOver <| Zip i
+                        , touchMove i
                         ]
                         []
 
@@ -139,6 +141,7 @@ pencil i p =
                         , SA.fill "blue"
                         , border
                         , onMouseOver <| Zip i
+                        , touchMove i
                         ]
                         []
 
@@ -162,6 +165,11 @@ pencil i p =
             [ body
             , pTip
             ]
+
+
+touchMove : Int -> Svg.Attribute Msg
+touchMove i =
+    on "touchmove" (Json.Decode.succeed <| Zip i)
 
 
 isEven : Int -> Bool
