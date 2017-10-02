@@ -22,7 +22,7 @@ main =
         }
 
 
-port touch : ( Int, Int ) -> Cmd msg
+port touch : ( Float, Float ) -> Cmd msg
 
 
 port zip : (Int -> msg) -> Sub msg
@@ -46,7 +46,7 @@ type Styles
 type Msg
     = Resize Window.Size
     | Zip Int
-    | Touch Int Int
+    | Touch Float Float
 
 
 styling : StyleSheet Styles vars
@@ -69,10 +69,10 @@ view { device, open } =
             device.width // 10
 
         pencilHeight =
-            device.height // 15
+            device.height // 8
 
         rows =
-            List.range 0 29
+            List.range 0 15
                 |> List.map
                     (\i ->
                         let
@@ -161,8 +161,8 @@ pencil index side bodyWidth tipWidth pencilHeight =
         touchMove =
             Json.Decode.map2
                 Touch
-                (Json.Decode.at [ "touches", "0", "pageX" ] Json.Decode.int)
-                (Json.Decode.at [ "touches", "0", "pageY" ] Json.Decode.int)
+                (Json.Decode.at [ "touches", "0", "pageX" ] Json.Decode.float)
+                (Json.Decode.at [ "touches", "0", "pageY" ] Json.Decode.float)
     in
         svg [ SA.height <| toString pencilHeight, SA.width <| toString (bodyWidth + tipWidth), SA.id <| toString index ]
             [ rect
@@ -177,7 +177,8 @@ pencil index side bodyWidth tipWidth pencilHeight =
                 [ points tipPoints
                 , SA.fill tipColor
                 , border
-                , onMouseOver <| Zip index
+
+                --, onMouseOver <| Zip index
                 , on "touchmove" touchMove
                 ]
                 []
